@@ -244,6 +244,9 @@ class TubeUp(object):
             'call_home': False,
             'logger': self.logger,
             'progress_hooks': [ydl_progress_hook]
+            # , 'format': 'mp4'
+            # , 'noindex': 'false'
+            
         }
 
         if proxy_url is not None:
@@ -274,8 +277,12 @@ class TubeUp(object):
         json_metadata_filepath = videobasename + '.info.json'
         with open(json_metadata_filepath) as f:
             vid_meta = json.load(f)
+            
+        custom_extractor=vid_meta['extractor']
+        if (custom_extractor.find('youtube') >= 0):
+            custom_extractor='yt'
 
-        itemname = ('%s-%s' % (vid_meta['extractor'],
+        itemname = ('%s-%s' % (custom_extractor, ##vid_meta['extractor'],
                                vid_meta['display_id']))
 
         # Replace illegal characters within identifer
@@ -440,7 +447,7 @@ class TubeUp(object):
 
         # load up tags into an IA compatible semicolon-separated string
         # example: Youtube;video;
-        tags_string = '%s;video;' % vid_meta['extractor_key']
+        tags_string = 'video;'  ## % vid_meta['extractor_key']
 
         if 'categories' in vid_meta:
             # add categories as tags as well, if they exist
@@ -454,12 +461,33 @@ class TubeUp(object):
         # license
         licenseurl = TubeUp.determine_licenseurl(vid_meta)
 
+        view_count = None
+        view_count_text = ''
+        if 'view_count' in vid_meta:
+            view_count = vid_meta['view_count']
+            view_count_text = ('<br/>View Count: {:,}').format(view_count)
+
+        like_count = None
+        if 'like_count' in vid_meta:
+            like_count = vid_meta['like_count']
+        dislike_count = None
+        if 'dislike_count' in vid_meta:
+            dislike_count = vid_meta['dislike_count']
+
+
         # if there is no description don't upload the empty .description file
         description_text = vid_meta.get('description', '')
 
         description = ('{0} <br/><br/>Source: <a href="{1}">{2}</a>'
-                       '<br/>Uploader: <a href="{3}">{4}</a>').format(
-            description_text, videourl, videourl, uploader_url, uploader)
+		'<br/>Uploader: <a href="{3}">{4}</a>{5}').format(
+                description_text, videourl, videourl, uploader_url, uploader, view_count_text)                                             
+
+        #description = ('{0} <br/><br/>Source: <a href="{1}">{2}</a>'
+        #               '<br/>Uploader: <a href="{3}">{4}</a>').format(
+        #    description_text, videourl, videourl, uploader_url, uploader)
+
+
+
 
         metadata = dict(
             mediatype=('audio' if collection == 'opensource_audio'
@@ -471,11 +499,17 @@ class TubeUp(object):
             date=upload_date,
             year=upload_year,
             subject=tags_string,
-            originalurl=videourl,
+            # originalurl=videourl,
             licenseurl=licenseurl,
+
+            view_count=view_count,
+            like_count=like_count,
+            dislike_count=dislike_count,
+            noindex='',
 
             # Set 'scanner' metadata pair to allow tracking of TubeUp
             # powered uploads, per request from archive.org
-            scanner='TubeUp Video Stream Mirroring Application {}'.format(__version__))
+            # scanner='TubeUp Video Stream Mirroring Application {}'.format(__version__))
+            scanner='RoK Python Uploader 1.0' )
 
         return metadata
